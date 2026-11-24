@@ -141,9 +141,9 @@
 
     <!-- 2. The DOM -->
     <div class="col" id="col-dom">
-      <div class="label">② The DOM<small>the browser's live tree of objects</small></div>
+      <div class="label">② The DOM<small>boxes the browser makes from your file</small></div>
       <div class="panel tree">
-        <div class="bar">in the browser's memory</div>
+        <div class="bar">inside the browser</div>
         <div class="body" id="tree"></div>
       </div>
     </div>
@@ -189,25 +189,25 @@
 
     const steps = [
       { cols: ["file"], input: "rick", status: "", items: [],
-        text: "This is <code>index.html</code>: just <strong>text</strong> in a file. Like a recipe. The browser can't use text directly." },
+        text: "This is your <code>index.html</code> file. It's just <strong>text</strong>: the instructions for the page." },
       { cols: ["file", "dom"], input: "rick", status: "", items: [],
-        text: "The browser reads your file and builds a <strong>tree of objects</strong> in memory. That tree is the <strong>DOM</strong>: Document Object Model. <strong>Every tag becomes one box.</strong>" },
+        text: "When the page opens, the browser reads your file and makes <strong>one box for every tag</strong>, nested the same way your tags are. These boxes are the <strong>DOM</strong>." },
       { cols: ["file", "dom"], input: "rick", status: "", items: [], on: ["input", "status", "results"],
-        text: "Each box is an <strong>object</strong>, with properties, like the objects you've made: <code>.value</code>, <code>.textContent</code>. Name, then value." },
+        text: "Each box holds information. The search box keeps what's typed in <code>.value</code>. The status line keeps its words in <code>.textContent</code>. JavaScript can <strong>read</strong> these and <strong>change</strong> them." },
       { cols: ["file", "dom", "page"], input: "rick", status: "", items: [],
-        text: "Then the browser <strong>paints the page from the DOM</strong>. What you see is the DOM, not your file." },
+        text: "The browser draws the page <strong>from the boxes</strong>. So the page shows what's in the boxes, not what's in your file." },
       { cols: ["file", "dom", "page"], input: "rick", status: "", items: [], on: ["status"],
         js: ['const statusText = document.getElementById("status");'],
-        text: "JavaScript can't touch your file. It talks to the <strong>DOM</strong>. <code>getElementById</code> finds the box with <code>id=\"status\"</code>. Now <code>statusText</code> <strong>is</strong> that box. Not a copy: the real one." },
+        text: "JavaScript never changes your file. It changes <strong>the boxes</strong>. <code>getElementById(\"status\")</code> finds the box with <code>id=\"status\"</code>, and we name it <code>statusText</code>." },
       { cols: ["file", "dom", "page"], input: "rick", status: "Searching...", items: [], on: ["status"], flash: ["status"],
         js: ['const statusText = document.getElementById("status");', 'statusText.textContent = "Searching...";'],
-        text: "Change a property on the box... and the page updates <strong>right away</strong>. No reload. That's how all 4 endings got on the screen Monday." },
+        text: "Put <code>\"Searching...\"</code> in that box, and the page shows it <strong>right away</strong>. No reload. That's how Monday's messages got on the screen." },
       { cols: ["file", "dom", "page"], input: "rick", status: "Searching...", items: [], fileOn: ["f-status"], stamp: "✓ unchanged",
         js: ['statusText.textContent = "Searching...";'],
-        text: "Now look at <code>index.html</code>: <code>&lt;p id=\"status\"&gt;</code> is <strong>still empty</strong>. JavaScript changed the DOM, <strong>not your file</strong>. Refresh, and the DOM is built fresh from the file." },
+        text: "Now look at your file: <code>&lt;p id=\"status\"&gt;</code> is <strong>still empty</strong>. JavaScript changed the box, <strong>not your file</strong>. Refresh, and the boxes are made again from the file, so the message is gone." },
       { cols: ["file", "dom", "page"], input: "summer", status: "", items: [], on: ["input"], flash: ["input"], fileOn: ["f-input"], stamp: "✓ still says rick",
         js: ['const url = `...character/?name=${searchBox.value}`;'],
-        text: "It works the other way too. The user types <strong>summer</strong>: the box's <code>.value</code> changes in the DOM. The file still says rick. <code>searchBox.value</code> reads the <strong>DOM</strong>, so it gets summer." },
+        text: "Reading works the same way. The user types <strong>summer</strong>, so the search box's <code>.value</code> is now \"summer\". Your file still says rick. <code>searchBox.value</code> reads <strong>the box</strong>, so it gets \"summer\"." },
       { cols: ["file", "dom", "page"], input: "summer", status: "", items: ["Rick Sanchez (Human, Alive)", "Rick (...)", "and 18 more..."], on: ["results"],
         js: ['results.textContent = "";'],
         text: "Remember Monday's first problem? The old Ricks never left. <code>results</code> is the <code>&lt;ul&gt;</code> box, still full of them..." },
@@ -216,19 +216,19 @@
         text: "...<code>results.textContent = \"\"</code> empties the box, and everything inside it is gone from the page." },
       { cols: ["file", "dom", "page"], input: "summer", status: "", items: [], floating: "", on: ["li"],
         js: ['const item = document.createElement("li");'],
-        text: "<code>createElement</code> makes a <strong>brand-new box</strong>. It's in memory, but <strong>not in the tree yet</strong>, so it's not on the page." },
+        text: "<code>createElement(\"li\")</code> makes a <strong>brand-new box</strong>. But it isn't inside any other box yet, so <strong>nobody can see it</strong>." },
       { cols: ["file", "dom", "page"], input: "summer", status: "", items: [], floating: SUMMER, on: ["li"],
         js: ['const item = document.createElement("li");', 'item.textContent = `${character.name} (...)`;'],
         text: "Fill it in with <code>.textContent</code>. Still floating. Still not on the page." },
       { cols: ["file", "dom", "page"], input: "summer", status: "", items: [SUMMER], on: ["li"], flash: ["list"],
         js: ['const item = document.createElement("li");', 'item.textContent = `${character.name} (...)`;', "results.appendChild(item);"],
-        text: "<code>appendChild</code> hangs it on the tree, <strong>inside</strong> <code>results</code>. Now it's on the page. <code>forEach</code> does this once per character." },
+        text: "<code>results.appendChild(item)</code> puts the new box <strong>inside</strong> the results box. Now it shows on the page. <code>forEach</code> does this once for each character." },
       { cols: ["file", "dom", "page"], input: "summer", status: "", items: [SUMMER, "Summer Smith (...)", "and 10 more..."], fileOn: ["f-results"], stamp: "✓ still an empty <ul>",
         js: [],
-        text: "See it for real: DevTools → <strong>Elements</strong> shows the <strong>DOM</strong>, live. Search, and watch the <code>&lt;li&gt;</code>s appear. <strong>View Page Source</strong> shows your <strong>file</strong>: still empty." },
+        text: "Try it for real. DevTools → <strong>Elements</strong> shows <strong>the boxes</strong>: search, and watch new <code>&lt;li&gt;</code>s appear. Right-click → <strong>View Page Source</strong> shows <strong>your file</strong>: the list is still empty." },
       { cols: ["file", "dom", "page"], input: "summer", status: "", items: [SUMMER, "Summer Smith (...)", "and 10 more..."],
         js: [],
-        text: "<strong>The DOM in one line:</strong> the browser turns your HTML into a tree of objects. JavaScript changes the tree, and the page follows, right away." }
+        text: "<strong>In one sentence:</strong> the browser turns your HTML into boxes (the DOM). JavaScript changes the boxes, and the page shows the change right away." }
     ];
 
     function el(id) { return document.getElementById(id); }
@@ -257,7 +257,7 @@
       </ul></li></ul></li></ul>`;
 
       if (s.floating !== undefined) {
-        html += `<div class="float">made with createElement, not in the tree yet:<br>
+        html += `<div class="float">new box, not on the page yet:<br>
           <span class="node new"><span class="tag">&lt;li&gt;</span><span class="prop">.textContent = <b>"${esc(s.floating)}"</b></span></span></div>`;
       }
       el("tree").innerHTML = html;
