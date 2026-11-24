@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>What is the DOM?</title>
+  <!-- Week 6 demo: the DOM, re-explained with Monday's Character Search (week-6/day-1). Step through with Next / Back
+       or the arrow keys. Jump to a screen with #N in the URL.
+       Three panels: the FILE (index.html, never changes) → the DOM (the browser's live tree of objects) → the PAGE.
+       The one idea: JavaScript changes the DOM, not your file, and the page follows the DOM right away. -->
+  <style>
+    :root {
+      --bg: #fffcf9;
+      --ink: #1e293b;
+      --muted: #64748b;
+      --blue: #4e89bd;
+      --red: #e06c75;
+      --green: #3f8f5a;
+      --gold: #d79b2b;
+      --line: #e2dcd3;
+      --hl: #fff1cc;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      font-family: Inter, system-ui, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+
+    h1 { margin: 20px 24px 0; font-size: 1.6rem; text-align: center; }
+
+    .stage {
+      flex: 1;
+      max-width: 1250px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 16px 24px;
+      display: grid;
+      grid-template-columns: 1fr 1.1fr 1fr;
+      grid-template-rows: auto auto;
+      gap: 14px 10px;
+      align-content: center;
+    }
+
+    .col { display: flex; flex-direction: column; gap: 6px; transition: opacity 0.35s; }
+    .col.hidden { opacity: 0; visibility: hidden; }
+    .label { text-align: center; font-weight: 800; font-size: 0.95rem; }
+    .label small { display: block; font-weight: 500; color: var(--muted); }
+
+    .panel { border: 3px solid var(--ink); border-radius: 14px; background: white; overflow: hidden; flex: 1; }
+    .panel .bar { background: #f1ede7; padding: 5px 12px; font-weight: 700; font-size: 0.85rem; color: var(--muted); border-bottom: 2px solid var(--line); }
+
+    /* The file */
+    .file { border-color: var(--muted); }
+    .file .body { padding: 8px 0; }
+    .fl { font-family: Consolas, monospace; font-size: 0.82rem; padding: 2px 12px; white-space: pre; border-left: 5px solid transparent; transition: background 0.3s; }
+    .stamp-file { margin: 6px 12px 8px; font-size: 0.85rem; font-weight: 700; color: var(--green); min-height: 1.2em; }
+
+    /* The DOM tree */
+    .tree { border-color: var(--blue); }
+    .tree .body { padding: 10px 12px; }
+    .tree ul { list-style: none; margin: 0; padding-left: 20px; border-left: 2px solid #cfd8e3; }
+    .tree > .body > ul { padding-left: 0; border-left: none; }
+    .tree li { margin: 5px 0; position: relative; }
+    .tree ul ul > li::before { content: ""; position: absolute; left: -20px; top: 14px; width: 16px; height: 2px; background: #cfd8e3; }
+    .node {
+      display: inline-block; border: 2px solid var(--blue); border-radius: 8px; padding: 2px 8px;
+      font-family: Consolas, monospace; font-size: 0.82rem; background: #f4f8fc;
+      transition: background 0.3s, box-shadow 0.3s, border-color 0.3s;
+    }
+    .node .tag { font-weight: 700; color: var(--blue); }
+    .node .prop { display: block; color: var(--muted); font-size: 0.78rem; }
+    .node .prop b { color: var(--ink); }
+    .node.on { background: var(--hl); border-color: var(--gold); box-shadow: 0 0 0 4px #fde9b8; }
+    .node.new { border-style: dashed; border-color: var(--green); background: #eef8f0; }
+    .float { margin-top: 10px; padding-top: 8px; border-top: 2px dashed var(--line); font-size: 0.8rem; color: var(--muted); }
+
+    /* The page */
+    .page { border-color: var(--ink); }
+    .page .body { padding: 12px; }
+    .page h3 { margin: 0 0 10px; font-size: 1.05rem; }
+    .pbox { display: flex; gap: 6px; margin-bottom: 8px; }
+    .pinput { flex: 1; border: 2px solid #c9ced6; border-radius: 6px; padding: 4px 8px; font-size: 0.9rem; min-height: 1.9em; transition: box-shadow 0.3s; }
+    .pbtn { border-radius: 6px; padding: 4px 10px; background: var(--ink); color: white; font-weight: 700; font-size: 0.85rem; }
+    .pstatus { font-weight: 700; color: #b0458f; min-height: 1.4em; margin: 4px 0; transition: background 0.3s; border-radius: 4px; }
+    .plist { border: 1px solid var(--line); border-radius: 6px; min-height: 2.2em; transition: background 0.3s; }
+    .plist div { padding: 4px 8px; border-bottom: 1px solid var(--line); font-size: 0.85rem; border-left: 4px solid #97ce4c; }
+    .plist div:last-child { border-bottom: none; }
+    .flash { background: var(--hl) !important; box-shadow: 0 0 0 4px #fde9b8; }
+
+    .on-line { background: var(--hl); border-left-color: var(--gold) !important; }
+
+    .arrows { display: flex; justify-content: space-around; font-size: 0.85rem; color: var(--muted); grid-column: 1 / -1; display: none; }
+
+    /* The JavaScript strip */
+    .js { grid-column: 1 / -1; border-color: var(--blue); flex: none; transition: opacity 0.35s; }
+    .js.hidden { opacity: 0; visibility: hidden; }
+    .js .body { padding: 6px 0; }
+    .jl { font-family: Consolas, monospace; font-size: 0.95rem; padding: 3px 14px; white-space: pre; border-left: 6px solid var(--gold); background: var(--hl); }
+    .jl.plain { background: white; border-left-color: transparent; color: var(--muted); }
+
+    .caption { max-width: 1000px; margin: 0 auto 8px; padding: 0 24px; min-height: 4.5em; font-size: 1.4rem; text-align: center; }
+    code { font-family: Consolas, monospace; background: #f1ede7; padding: 1px 6px; border-radius: 4px; }
+
+    .controls { display: flex; justify-content: center; align-items: center; gap: 16px; padding: 0 24px 24px; }
+    .controls button { padding: 10px 24px; font: inherit; font-weight: 700; border: 2px solid var(--ink); border-radius: 999px; background: white; cursor: pointer; }
+    .controls #next { background: var(--ink); color: white; }
+    .controls button:disabled { opacity: 0.35; cursor: default; }
+    .count { color: var(--muted); }
+
+    @media (max-width: 900px) {
+      .stage { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <h1>What is the DOM?</h1>
+
+  <div class="stage">
+    <!-- 1. The file -->
+    <div class="col" id="col-file">
+      <div class="label">① Your file<small>text you wrote</small></div>
+      <div class="panel file">
+        <div class="bar">index.html</div>
+        <div class="body">
+          <div class="fl">&lt;h1&gt;Character Search&lt;/h1&gt;</div>
+          <div class="fl" id="f-input">&lt;input id="search-box" value="rick"&gt;</div>
+          <div class="fl">&lt;button id="search-btn"&gt;Search&lt;/button&gt;</div>
+          <div class="fl" id="f-status">&lt;p id="status"&gt;&lt;/p&gt;</div>
+          <div class="fl" id="f-results">&lt;ul id="results"&gt;&lt;/ul&gt;</div>
+        </div>
+        <div class="stamp-file" id="file-stamp"></div>
+      </div>
+    </div>
+
+    <!-- 2. The DOM -->
+    <div class="col" id="col-dom">
+      <div class="label">② The DOM<small>the browser's live tree of objects</small></div>
+      <div class="panel tree">
+        <div class="bar">in the browser's memory</div>
+        <div class="body" id="tree"></div>
+      </div>
+    </div>
+
+    <!-- 3. The page -->
+    <div class="col" id="col-page">
+      <div class="label">③ The page<small>what the user sees</small></div>
+      <div class="panel page">
+        <div class="bar">localhost:5500 · Live Server</div>
+        <div class="body">
+          <h3>Character Search</h3>
+          <div class="pbox"><div class="pinput" id="p-input"></div><div class="pbtn">Search</div></div>
+          <div class="pstatus" id="p-status"></div>
+          <div class="plist" id="p-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- The JavaScript -->
+    <div class="panel js" id="js">
+      <div class="bar">script.js</div>
+      <div class="body" id="js-lines"></div>
+    </div>
+  </div>
+
+  <p class="caption" id="caption"></p>
+
+  <div class="controls">
+    <button id="back" type="button">← Back</button>
+    <span class="count" id="count"></span>
+    <button id="next" type="button">Next →</button>
+  </div>
+
+  <script>
+    // Each step is a full picture of the moment:
+    //   cols: which of file / dom / page are visible
+    //   input, status, items: what the DOM holds right now (the page always shows the same)
+    //   floating: an <li> made with createElement but not added to the tree yet
+    //   on: which tree boxes light up ("input", "status", "results", "li")
+    //   flash: which page parts light up · fileOn: which file lines light up
+    //   js: the script.js lines to show (the last one is the one running)
+    const SUMMER = "Summer Smith (Human, Alive)";
+
+    const steps = [
+      { cols: ["file"], input: "rick", status: "", items: [],
+        text: "This is <code>index.html</code>: just <strong>text</strong> in a file. Like a recipe. The browser can't use text directly." },
+      { cols: ["file", "dom"], input: "rick", status: "", items: [],
+        text: "The browser reads your file and builds a <strong>tree of objects</strong> in memory. That tree is the <strong>DOM</strong>: Document Object Model. <strong>Every tag becomes one box.</strong>" },
+      { cols: ["file", "dom"], input: "rick", status: "", items: [], on: ["input", "status", "results"],
+        text: "Each box is an <strong>object</strong>, with properties, like the objects you've made: <code>.value</code>, <code>.textContent</code>. Name, then value." },
+      { cols: ["file", "dom", "page"], input: "rick", status: "", items: [],
+        text: "Then the browser <strong>paints the page from the DOM</strong>. What you see is the DOM, not your file." },
+      { cols: ["file", "dom", "page"], input: "rick", status: "", items: [], on: ["status"],
+        js: ['const statusText = document.getElementById("status");'],
+        text: "JavaScript can't touch your file. It talks to the <strong>DOM</strong>. <code>getElementById</code> finds the box with <code>id=\"status\"</code>. Now <code>statusText</code> <strong>is</strong> that box. Not a copy: the real one." },
+      { cols: ["file", "dom", "page"], input: "rick", status: "Searching...", items: [], on: ["status"], flash: ["status"],
+        js: ['const statusText = document.getElementById("status");', 'statusText.textContent = "Searching...";'],
+        text: "Change a property on the box... and the page updates <strong>right away</strong>. No reload. That's how all 4 endings got on the screen Monday." },
+      { cols: ["file", "dom", "page"], input: "rick", status: "Searching...", items: [], fileOn: ["f-status"], stamp: "✓ unchanged",
+        js: ['statusText.textContent = "Searching...";'],
+        text: "Now look at <code>index.html</code>: <code>&lt;p id=\"status\"&gt;</code> is <strong>still empty</strong>. JavaScript changed the DOM, <strong>not your file</strong>. Refresh, and the DOM is built fresh from the file." },
+      { cols: ["file", "dom", "page"], input: "summer", status: "", items: [], on: ["input"], flash: ["input"], fileOn: ["f-input"], stamp: "✓ still says rick",
+        js: ['const url = `...character/?name=${searchBox.value}`;'],
+        text: "It works the other way too. The user types <strong>summer</strong>: the box's <code>.value</code> changes in the DOM. The file still says rick. <code>searchBox.value</code> reads the <strong>DOM</strong>, so it gets summer." },
+      { cols: ["file", "dom", "page"], input: "summer", status: "", items: ["Rick Sanchez (Human, Alive)", "Rick (...)", "and 18 more..."], on: ["results"],
+        js: ['results.textContent = "";'],
+        text: "Remember Monday's first problem? The old Ricks never left. <code>results</code> is the <code>&lt;ul&gt;</code> box, still full of them..." },
+      { cols: ["file", "dom", "page"], input: "summer", status: "", items: [], on: ["results"], flash: ["list"],
+        js: ['results.textContent = "";'],
+        text: "...<code>results.textContent = \"\"</code> empties the box, and everything inside it is gone from the page." },
+      { cols: ["file", "dom", "page"], input: "summer", status: "", items: [], floating: "", on: ["li"],
+        js: ['const item = document.createElement("li");'],
+        text: "<code>createElement</code> makes a <strong>brand-new box</strong>. It's in memory, but <strong>not in the tree yet</strong>, so it's not on the page." },
+      { cols: ["file", "dom", "page"], input: "summer", status: "", items: [], floating: SUMMER, on: ["li"],
+        js: ['const item = document.createElement("li");', 'item.textContent = `${character.name} (...)`;'],
+        text: "Fill it in with <code>.textContent</code>. Still floating. Still not on the page." },
+      { cols: ["file", "dom", "page"], input: "summer", status: "", items: [SUMMER], on: ["li"], flash: ["list"],
+        js: ['const item = document.createElement("li");', 'item.textContent = `${character.name} (...)`;', "results.appendChild(item);"],
+        text: "<code>appendChild</code> hangs it on the tree, <strong>inside</strong> <code>results</code>. Now it's on the page. <code>forEach</code> does this once per character." },
+      { cols: ["file", "dom", "page"], input: "summer", status: "", items: [SUMMER, "Summer Smith (...)", "and 10 more..."], fileOn: ["f-results"], stamp: "✓ still an empty <ul>",
+        js: [],
+        text: "See it for real: DevTools → <strong>Elements</strong> shows the <strong>DOM</strong>, live. Search, and watch the <code>&lt;li&gt;</code>s appear. <strong>View Page Source</strong> shows your <strong>file</strong>: still empty." },
+      { cols: ["file", "dom", "page"], input: "summer", status: "", items: [SUMMER, "Summer Smith (...)", "and 10 more..."],
+        js: [],
+        text: "<strong>The DOM in one line:</strong> the browser turns your HTML into a tree of objects. JavaScript changes the tree, and the page follows, right away." }
+    ];
+
+    function el(id) { return document.getElementById(id); }
+
+    function esc(text) {
+      return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    function node(tag, props, key, s) {
+      const on = s.on && s.on.indexOf(key) !== -1 ? " on" : "";
+      const propHtml = props.map(function (p) { return `<span class="prop">${p}</span>`; }).join("");
+      return `<span class="node${on}"><span class="tag">${esc(tag)}</span>${propHtml}</span>`;
+    }
+
+    function drawTree(s) {
+      const items = s.items.map(function (text) {
+        return `<li>${node("<li>", [`.textContent = <b>"${esc(text)}"</b>`], "li", s)}</li>`;
+      }).join("");
+
+      let html = `<ul><li><span class="node"><span class="tag">document</span></span><ul><li><span class="node"><span class="tag">&lt;body&gt;</span></span><ul>
+        <li>${node("<h1>", ['.textContent = <b>"Character Search"</b>'], "h1", s)}</li>
+        <li>${node('<input id="search-box">', [`.value = <b>"${esc(s.input)}"</b>`], "input", s)}</li>
+        <li>${node('<button id="search-btn">', [], "btn", s)}</li>
+        <li>${node('<p id="status">', [`.textContent = <b>"${esc(s.status)}"</b>`], "status", s)}</li>
+        <li>${node('<ul id="results">', [], "results", s)}${items ? `<ul>${items}</ul>` : ""}</li>
+      </ul></li></ul></li></ul>`;
+
+      if (s.floating !== undefined) {
+        html += `<div class="float">made with createElement, not in the tree yet:<br>
+          <span class="node new"><span class="tag">&lt;li&gt;</span><span class="prop">.textContent = <b>"${esc(s.floating)}"</b></span></span></div>`;
+      }
+      el("tree").innerHTML = html;
+    }
+
+    function drawPage(s) {
+      const flash = s.flash || [];
+      el("p-input").textContent = s.input;
+      el("p-input").classList.toggle("flash", flash.indexOf("input") !== -1);
+      el("p-status").textContent = s.status;
+      el("p-status").classList.toggle("flash", flash.indexOf("status") !== -1);
+      el("p-list").innerHTML = s.items.map(function (t) { return `<div>${esc(t)}</div>`; }).join("");
+      el("p-list").classList.toggle("flash", flash.indexOf("list") !== -1);
+    }
+
+    let step = 0;
+
+    function show() {
+      const s = steps[step];
+
+      ["file", "dom", "page"].forEach(function (c) {
+        el(`col-${c}`).classList.toggle("hidden", s.cols.indexOf(c) === -1);
+      });
+
+      document.querySelectorAll(".fl").forEach(function (line) {
+        line.classList.toggle("on-line", !!s.fileOn && s.fileOn.indexOf(line.id) !== -1);
+      });
+      el("file-stamp").textContent = s.stamp || "";
+
+      drawTree(s);
+      drawPage(s);
+
+      const js = s.js || [];
+      el("js").classList.toggle("hidden", js.length === 0);
+      el("js-lines").innerHTML = js.map(function (line, n) {
+        const cls = n === js.length - 1 ? "jl" : "jl plain";
+        return `<div class="${cls}">${esc(line)}</div>`;
+      }).join("");
+
+      el("caption").innerHTML = s.text;
+      el("count").textContent = `${step + 1} / ${steps.length}`;
+      el("back").disabled = step === 0;
+      el("next").disabled = step === steps.length - 1;
+      history.replaceState(null, "", `#${step + 1}`);
+    }
+
+    function jump() {
+      const n = parseInt(location.hash.slice(1), 10);
+      if (n >= 1 && n <= steps.length && n - 1 !== step) { step = n - 1; show(); }
+    }
+
+    el("next").addEventListener("click", function () { if (step < steps.length - 1) { step++; show(); } });
+    el("back").addEventListener("click", function () { if (step > 0) { step--; show(); } });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowRight") el("next").click();
+      if (e.key === "ArrowLeft") el("back").click();
+    });
+    window.addEventListener("hashchange", jump);
+
+    const start = parseInt(location.hash.slice(1), 10);
+    if (start >= 1 && start <= steps.length) step = start - 1;
+    show();
+  </script>
+</body>
+</html>
